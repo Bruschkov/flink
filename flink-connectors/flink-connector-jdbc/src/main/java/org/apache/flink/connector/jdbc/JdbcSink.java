@@ -25,13 +25,11 @@ import org.apache.flink.connector.jdbc.internal.executor.JdbcBatchStatementExecu
 import org.apache.flink.connector.jdbc.xa.JdbcXaSinkFunction;
 import org.apache.flink.connector.jdbc.xa.XaFacade;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.function.SerializableSupplier;
 
 import javax.sql.XADataSource;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 /** Facade to create JDBC {@link SinkFunction sinks}. */
 @PublicEvolving
@@ -73,13 +71,11 @@ public class JdbcSink {
                 new JdbcBatchingOutputFormat<>(
                         new SimpleJdbcConnectionProvider(connectionOptions),
                         executionOptions,
-                        context -> {
-                            Preconditions.checkState(
-                                    !context.getExecutionConfig().isObjectReuseEnabled(),
-                                    "objects can not be reused with JDBC sink function");
-                            return JdbcBatchStatementExecutor.simple(
-                                    sql, statementBuilder, Function.identity());
-                        },
+                        context -> JdbcBatchStatementExecutor.simple(
+                                sql,
+                                statementBuilder,
+                                ValueTransformerFactory.createTransformer(context)
+                        ),
                         JdbcBatchingOutputFormat.RecordExtractor.identity()));
     }
 

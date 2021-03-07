@@ -25,6 +25,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.jdbc.JdbcExactlyOnceOptions;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
 import org.apache.flink.connector.jdbc.JdbcStatementBuilder;
+import org.apache.flink.connector.jdbc.ValueTransformerFactory;
 import org.apache.flink.connector.jdbc.internal.JdbcBatchingOutputFormat;
 import org.apache.flink.connector.jdbc.internal.executor.JdbcBatchStatementExecutor;
 import org.apache.flink.connector.jdbc.xa.XaFacade.EmptyXaTransactionException;
@@ -45,7 +46,6 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.connector.jdbc.xa.JdbcXaSinkFunctionState.of;
@@ -162,13 +162,8 @@ public class JdbcXaSinkFunction<T> extends AbstractRichFunction
                 new JdbcBatchingOutputFormat<>(
                         xaFacade,
                         executionOptions,
-                        context -> {
-                            Preconditions.checkState(
-                                    !context.getExecutionConfig().isObjectReuseEnabled(),
-                                    "objects can not be reused with JDBC sink function");
-                            return JdbcBatchStatementExecutor.simple(
-                                    sql, statementBuilder, Function.identity());
-                        },
+                        context -> JdbcBatchStatementExecutor.simple(
+                                sql, statementBuilder, ValueTransformerFactory.createTransformer(context)),
                         JdbcBatchingOutputFormat.RecordExtractor.identity()),
                 xaFacade,
                 XidGenerator.semanticXidGenerator(),
